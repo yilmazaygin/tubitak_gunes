@@ -29,7 +29,7 @@ class Panles:
         return self.module_eff * self.dim_x * self.dim_y * self.panel_amount
     
 
-class Data:
+class MomentData:
     """
     Data class to represent solar data and perform calculations related to solar angles and energy generation.
 
@@ -115,8 +115,9 @@ class Data:
 
         # Fraction 
         self.fraction = (
-            math.cos(math.radians(self.ev_ang)) *
-            math.sin(math.radians(self.module_tilt) * math.cos(math.radians(self.az_ang - self.module_azimuth)))  +
+            (math.cos(math.radians(self.ev_ang)) *
+            math.sin(math.radians(self.module_tilt) * 
+            math.cos(math.radians(self.az_ang - self.module_azimuth))))  +
             (math.sin(math.radians(self.ev_ang)) *
             math.cos(math.radians(self.module_tilt)))
         )
@@ -148,9 +149,43 @@ class Data:
         print(f"Generated kW: {self.generated_kw} kW")
         print("----------------")
 
+class Calculation:
+    """
+    Class to perform calculations related to solar energy generation.
+    """
+    def daily_kw(self, moment_data:MomentData) -> float:
+        """
+        Calculate the total energy generated in a day by summing the energy generated each hour,
+        ignoring any hours where data retrieval fails.
+        
+        Returns:
+            float: Total energy generated in a day (kW).
+        """
+        sum_kw = 0
+
+        for i in range(24):
+            try:
+                data = MomentData(
+                    day=moment_data.day,
+                    gmt=moment_data.gmt,
+                    hour=i,
+                    longitude=moment_data.longitude,
+                    latitude=moment_data.latitude,
+                    module_azimuth=moment_data.module_azimuth,
+                    module_tilt=moment_data.module_tilt,
+                    constant_eff=moment_data.constant_eff
+                )
+                sum_kw += data.generated_kw
+
+            except Exception as e:
+                # İlgili saat için veri alınamazsa atla
+                continue
+
+        return sum_kw
+
 # Test for Data class 
-data = Data(
-    day=2,
+data = MomentData(
+    day=1,
     gmt=2,
     hour=13,
     longitude=27.095316,
@@ -161,3 +196,7 @@ data = Data(
 )
 
 data.print_data()
+
+# Test for Calculation class
+calc = Calculation()
+print(f"Total energy generated in a day: {calc.daily_kw(data)} kW")
