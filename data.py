@@ -153,11 +153,12 @@ class Calculation:
     """
     Class to perform calculations related to solar energy generation.
     """
-    def daily_kw(self, moment_data:MomentData) -> float:
+
+    def daily_kw(self, moment_data: MomentData) -> float:
         """
         Calculate the total energy generated in a day by summing the energy generated each hour,
         ignoring any hours where data retrieval fails.
-        
+
         Returns:
             float: Total energy generated in a day (kW).
         """
@@ -176,12 +177,55 @@ class Calculation:
                     constant_eff=moment_data.constant_eff
                 )
                 sum_kw += data.generated_kw
-
-            except Exception as e:
-                # İlgili saat için veri alınamazsa atla
+            except Exception:
                 continue
 
         return sum_kw
+
+    def calc_month(self, moment_data: MomentData, month: int) -> float:
+        """
+        Calculate the total energy generated in a given month.
+
+        Args:
+            moment_data (MomentData): Base moment data for location and configuration.
+            month (int): Month number (1 to 12).
+
+        Returns:
+            float: Total energy generated in the month (kW).
+        """
+        days_in_month = {
+            1: 31, 2: 28, 3: 31, 4: 30,
+            5: 31, 6: 30, 7: 31, 8: 31,
+            9: 30, 10: 31, 11: 30, 12: 31
+        }
+
+        total_kw = 0
+        base_day_of_year = sum(days_in_month[m] for m in range(1, month))
+
+        for d in range(1, days_in_month[month] + 1):
+            day_of_year = base_day_of_year + d
+            moment_data.day = day_of_year
+            total_kw += self.daily_kw(moment_data)
+
+        return total_kw
+
+    def calc_year(self, moment_data: MomentData) -> float:
+        """
+        Calculate the total energy generated in a year.
+
+        Args:
+            moment_data (MomentData): Base moment data for location and configuration.
+
+        Returns:
+            float: Total energy generated in the year (kW).
+        """
+        total_kw = 0
+        for day in range(1, 366):  # 1 to 365
+            moment_data.day = day
+            total_kw += self.daily_kw(moment_data)
+
+        return total_kw
+
 
 # Test for Data class 
 data = MomentData(
@@ -200,3 +244,14 @@ data.print_data()
 # Test for Calculation class
 calc = Calculation()
 print(f"Total energy generated in a day: {calc.daily_kw(data)} kW")
+
+# Test for Calculation class
+calc = Calculation()
+
+# Aylık üretim (örnek: Ocak ayı)
+january_kw = calc.calc_month(data, 1)
+print(f"Total energy generated in January: {january_kw:.2f} kW")
+
+# Yıllık üretim
+year_kw = calc.calc_year(data)
+print(f"Total energy generated in a year: {year_kw:.2f} kW")
