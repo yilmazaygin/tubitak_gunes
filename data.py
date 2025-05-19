@@ -1,7 +1,52 @@
 import math
 
+CONSTANT_EFF = 2.866752 # This value is used in excel constantly so we can use it in the code as well, also can be calculated by the get_constant_eff method in the Panles class
+
+class Panles:
+    """
+    Class to represent solar panels and calculate their constant efficiency.
+    Attributes:
+        module_eff (float): Efficiency of the solar module.
+        dim_x (float): Dimension of the solar module in x direction.
+        dim_y (float): Dimension of the solar module in y direction.
+        panel_amount (int): Number of solar panels.
+    """
+    def __init__(self, module_eff:float, dim_x:float, dim_y:float, panel_amount:int):
+        """
+        Initialize the solar panel attributes.
+        """
+        self.module_eff = module_eff
+        self.dim_x = dim_x
+        self.dim_y = dim_y
+        self.panel_amount = panel_amount
+
+    def get_constant_eff(self) -> float:
+        """
+        Calculate the constant efficiency of the solar panels.
+        Returns:
+            float: Constant efficiency of the solar panels.
+        """
+        return self.module_eff * self.dim_x * self.dim_y * self.panel_amount
+    
+
 class Data:
-    def __init__(self, day: int, gmt: int, hour: float, longitude: float, latitude: float, module_azimuth: float, module_tilt: float):
+    """
+    Data class to represent solar data and perform calculations related to solar angles and energy generation.
+
+    Attributes:
+        day (int): Day of the year.
+        gmt (int): GMT offset.
+        hour (float): Hour of the day.
+        longitude (float): Longitude of the location.
+        latitude (float): Latitude of the location.
+        module_azimuth (float): Azimuth angle of the solar module.
+        module_tilt (float): Tilt angle of the solar module.
+        constant_eff (float): Constant efficiency of the solar panels.
+    """
+    def __init__(self, day: int, gmt: int, hour: float, longitude: float, latitude: float, module_azimuth: float, module_tilt: float, constant_eff: float ):
+        """
+        Initialize the solar data attributes and perform calculations.
+        """
         self.day = day
         self.gmt = gmt
         self.hour = hour
@@ -9,8 +54,9 @@ class Data:
         self.latitude = latitude
         self.module_azimuth = module_azimuth
         self.module_tilt = module_tilt
+        self.constant_eff = constant_eff
 
-        # B değeri (güneş yılına göre)
+        # B value according to the day of the year
         self.data_B = (360 / 365) * (self.day - 81)
 
         # EOT (Equation of Time)
@@ -40,7 +86,7 @@ class Data:
         # Zenith angle
         self.zenith_ang = 90 - self.ev_ang
 
-        # Azimuth angle hesaplama (doğru formül)
+        # Azimuth angle calculation
         numerator = (
             math.sin(math.radians(self.dec_ang)) * math.cos(math.radians(self.latitude)) -
             math.cos(math.radians(self.dec_ang)) * math.sin(math.radians(self.latitude)) * math.cos(math.radians(self.hra))
@@ -48,7 +94,7 @@ class Data:
         denominator = math.cos(math.radians(self.ev_ang))
 
         cos_az_arg = numerator / denominator
-        # acos argümanı [-1, 1] aralığında olmalı
+        # acos argument must be in the range [-1, 1]
         cos_az_arg = max(min(cos_az_arg, 1), -1)
         azimuth_base = math.degrees(math.acos(cos_az_arg))
 
@@ -57,35 +103,32 @@ class Data:
         else:
             self.az_ang = azimuth_base
 
-        # Sabah ve öğleden sonra azimuth açılarını da ayrı tutalım
-        self.azi_ang_mor = azimuth_base  # sabah açısı (hra <= 0 için)
-        self.az_ang_past12 = 360 - azimuth_base  # öğleden sonra (hra > 0 için)
+        # Morning and afternoon azimuth angles
+        self.azi_ang_mor = azimuth_base  # Morning angle (for hra <= 0)
+        self.az_ang_past12 = 360 - azimuth_base  # Afternoon angle (for hra > 0)
 
-        # Air mass (hava kütlesi)
+        # Air mass
         self.air_mass = 1 / (math.cos(math.radians(self.zenith_ang)) + 0.50572 * (96.07995 - self.zenith_ang) ** -1.6364)
 
-        # S incident (güneş ışınımı)
+        # S incident
         self.s_incident = 1.353 * (0.7 ** (self.air_mass ** 0.678))
 
-        # Fraction (modül ve güneş açılarının çarpımı)
+        # Fraction 
         self.fraction = (
             math.cos(math.radians(self.ev_ang)) *
             math.sin(math.radians(self.module_tilt) * math.cos(math.radians(self.az_ang - self.module_azimuth)))  +
-            math.sin(math.radians(self.ev_ang)) *
-            math.cos(math.radians(self.module_tilt))
+            (math.sin(math.radians(self.ev_ang)) *
+            math.cos(math.radians(self.module_tilt)))
         )
 
-        # Module üzerindeki güneş ışınımı (negatif olmasın diye max kullandık)
+        # Solar irradiance on the module (used max to avoid negative values)
         self.s_module = max(0, self.s_incident * self.fraction)
+        
+        self.generated_kw = self.s_module * self.constant_eff 
 
     def print_data(self):
-        print(f"Day: {self.day}")
-        print(f"GMT: {self.gmt}")
-        print(f"Hour: {self.hour}")
-        print(f"Longitude: {self.longitude}")
-        print(f"Latitude: {self.latitude}")
-        print(f"Module Azimuth: {self.module_azimuth}")
-        print(f"Module Tilt: {self.module_tilt}")
+        print("----------------")
+        print(f"VALUES: Day:{self.day}, GMT:{self.gmt}, Hour:{self.hour}, Longitude:{self.longitude}, Latitude:{self.latitude}, Module Azimuth:{self.module_azimuth}, Module Tilt:{self.module_tilt}, Constant Efficiency:{self.constant_eff} \n")
         print(f"B (deg): {self.data_B}")
         print(f"EOT: {self.eot}")
         print(f"LSTM: {self.lstm}")
@@ -95,15 +138,17 @@ class Data:
         print(f"Declination Angle: {self.dec_ang}")
         print(f"Elevation Angle: {self.ev_ang}")
         print(f"Zenith Angle: {self.zenith_ang}")
-        print(f"Azimuth Angle Morning (azi_ang_mor): {self.azi_ang_mor}")
-        print(f"Azimuth Angle After 12 (az_ang_past12): {self.az_ang_past12}")
-        print(f"Azimuth Angle (final az_ang): {self.az_ang}")
+        print(f"Azimuth Angle Morning: {self.azi_ang_mor}")
+        print(f"Azimuth Angle After 12: {self.az_ang_past12}")
+        print(f"Azimuth Angle (Final): {self.az_ang}")
         print(f"Air Mass: {self.air_mass}")
         print(f"S Incident: {self.s_incident}")
         print(f"Fraction: {self.fraction}")
-        print(f"S Module: {self.s_module}")
+        print(f"S Module: {self.s_module} kW/m2")
+        print(f"Generated kW: {self.generated_kw} kW")
+        print("----------------")
 
-# Test
+# Test for Data class 
 data = Data(
     day=2,
     gmt=2,
@@ -111,7 +156,8 @@ data = Data(
     longitude=27.095316,
     latitude=38,
     module_azimuth=180,
-    module_tilt=33
+    module_tilt=47,
+    constant_eff= CONSTANT_EFF
 )
 
 data.print_data()
