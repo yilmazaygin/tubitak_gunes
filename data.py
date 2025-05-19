@@ -70,8 +70,7 @@ class Data:
         # Fraction (modül ve güneş açılarının çarpımı)
         self.fraction = (
             math.cos(math.radians(self.ev_ang)) *
-            math.sin(math.radians(self.module_tilt)) *
-            math.cos(math.radians(self.az_ang - self.module_azimuth)) +
+            math.sin(math.radians(self.module_tilt) * math.cos(math.radians(self.az_ang - self.module_azimuth)))  +
             math.sin(math.radians(self.ev_ang)) *
             math.cos(math.radians(self.module_tilt))
         )
