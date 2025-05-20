@@ -1,34 +1,7 @@
 import math
 
 CONSTANT_EFF = 2.866752 # This value is used in excel constantly so we can use it in the code as well, also can be calculated by the get_constant_eff method in the Panles class
-
-class Panles:
-    """
-    Class to represent solar panels and calculate their constant efficiency.
-    Attributes:
-        module_eff (float): Efficiency of the solar module.
-        dim_x (float): Dimension of the solar module in x direction.
-        dim_y (float): Dimension of the solar module in y direction.
-        panel_amount (int): Number of solar panels.
-    """
-    def __init__(self, module_eff:float, dim_x:float, dim_y:float, panel_amount:int):
-        """
-        Initialize the solar panel attributes.
-        """
-        self.module_eff = module_eff
-        self.dim_x = dim_x
-        self.dim_y = dim_y
-        self.panel_amount = panel_amount
-
-    def get_constant_eff(self) -> float:
-        """
-        Calculate the constant efficiency of the solar panels.
-        Returns:
-            float: Constant efficiency of the solar panels.
-        """
-        return self.module_eff * self.dim_x * self.dim_y * self.panel_amount
     
-
 class MomentData:
     """
     Data class to represent solar data and perform calculations related to solar angles and energy generation.
@@ -149,84 +122,7 @@ class MomentData:
         print(f"Generated kW: {self.generated_kw} kW")
         print("----------------")
 
-class Calculation:
-    """
-    Class to perform calculations related to solar energy generation.
-    """
-
-    def daily_kw(self, moment_data: MomentData) -> float:
-        """
-        Calculate the total energy generated in a day by summing the energy generated each hour,
-        ignoring any hours where data retrieval fails.
-
-        Returns:
-            float: Total energy generated in a day (kW).
-        """
-        sum_kw = 0
-
-        for i in range(24):
-            try:
-                data = MomentData(
-                    day=moment_data.day,
-                    gmt=moment_data.gmt,
-                    hour=i,
-                    longitude=moment_data.longitude,
-                    latitude=moment_data.latitude,
-                    module_azimuth=moment_data.module_azimuth,
-                    module_tilt=moment_data.module_tilt,
-                    constant_eff=moment_data.constant_eff
-                )
-                sum_kw += data.generated_kw
-            except Exception:
-                continue
-
-        return sum_kw
-
-    def calc_month(self, moment_data: MomentData, month: int) -> float:
-        """
-        Calculate the total energy generated in a given month.
-
-        Args:
-            moment_data (MomentData): Base moment data for location and configuration.
-            month (int): Month number (1 to 12).
-
-        Returns:
-            float: Total energy generated in the month (kW).
-        """
-        days_in_month = {
-            1: 31, 2: 28, 3: 31, 4: 30,
-            5: 31, 6: 30, 7: 31, 8: 31,
-            9: 30, 10: 31, 11: 30, 12: 31
-        }
-
-        total_kw = 0
-        base_day_of_year = sum(days_in_month[m] for m in range(1, month))
-
-        for d in range(1, days_in_month[month] + 1):
-            day_of_year = base_day_of_year + d
-            moment_data.day = day_of_year
-            total_kw += self.daily_kw(moment_data)
-
-        return total_kw
-
-    def calc_year(self, moment_data: MomentData) -> float:
-        """
-        Calculate the total energy generated in a year.
-
-        Args:
-            moment_data (MomentData): Base moment data for location and configuration.
-
-        Returns:
-            float: Total energy generated in the year (kW).
-        """
-        total_kw = 0
-        for day in range(1, 366):  # 1 to 365
-            moment_data.day = day
-            total_kw += self.daily_kw(moment_data)
-
-        return total_kw
-
-
+"""
 # Test for Data class 
 data = MomentData(
     day=1,
@@ -240,18 +136,4 @@ data = MomentData(
 )
 
 data.print_data()
-
-# Test for Calculation class
-calc = Calculation()
-print(f"Total energy generated in a day: {calc.daily_kw(data)} kW")
-
-# Test for Calculation class
-calc = Calculation()
-
-# Aylık üretim (örnek: Ocak ayı)
-january_kw = calc.calc_month(data, 1)
-print(f"Total energy generated in January: {january_kw:.2f} kW")
-
-# Yıllık üretim
-year_kw = calc.calc_year(data)
-print(f"Total energy generated in a year: {year_kw:.2f} kW")
+"""
